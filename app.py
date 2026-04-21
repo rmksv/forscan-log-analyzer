@@ -111,7 +111,7 @@ if uploaded_file is not None:
                         name=col,
                         yaxis="y1",
                         line=dict(width=2),
-                        hovertemplate="Time: %{x|%H:%M:%S}<br>" + col + ": %{y}<extra></extra>"
+                        hovertemplate=col + ": %{y}<extra></extra>"
                     )
                 )
 
@@ -124,7 +124,7 @@ if uploaded_file is not None:
                         name=col,
                         yaxis="y2",
                         line=dict(width=2, dash="dash"),
-                        hovertemplate="Time: %{x|%H:%M:%S}<br>" + col + ": %{y}<extra></extra>"
+                        hovertemplate=col + ": %{y}<extra></extra>"
                     )
                 )
 
@@ -160,6 +160,6 @@ if uploaded_file is not None:
                 use_container_width=True,
                 config={
                     "scrollZoom": False,
-                    "displayModeBar": False
+                    "displayModeBar": True
                 }
             )
