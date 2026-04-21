@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 MAX_FILE_SIZE_MB = 50
 MAX_ROWS = 200_000
@@ -37,125 +36,130 @@ if uploaded_file is not None:
 
     df["_time"] = pd.to_datetime(df[x_column], unit="ms")
 
-    signals = st.multiselect("Signals", columns)
-
-    if len(signals) == 0:
-        st.stop()
-
     min_time = df["_time"].min()
     max_time = df["_time"].max()
 
-    if "global_range" not in st.session_state:
-        st.session_state.global_range = (min_time, max_time)
+    time_range = st.slider(
+        "Time range",
+        min_value=min_time.to_pydatetime(),
+        max_value=max_time.to_pydatetime(),
+        value=(min_time.to_pydatetime(), max_time.to_pydatetime()),
+        format="HH:mm:ss"
+    )
 
-    if "cursor_time" not in st.session_state:
-        st.session_state.cursor_time = min_time
-
-    col1, col2 = st.columns([3,1])
-
-    with col1:
-        selected_range = st.slider(
-            "Time range",
-            min_value=min_time.to_pydatetime(),
-            max_value=max_time.to_pydatetime(),
-            value=(
-                st.session_state.global_range[0].to_pydatetime(),
-                st.session_state.global_range[1].to_pydatetime()
-            ),
-            format="HH:mm:ss"
-        )
-
-        start, end = pd.to_datetime(selected_range[0]), pd.to_datetime(selected_range[1])
-        st.session_state.global_range = (start, end)
-
-    with col2:
-        cursor = st.slider(
-            "Cursor",
-            min_value=min_time.to_pydatetime(),
-            max_value=max_time.to_pydatetime(),
-            value=st.session_state.cursor_time.to_pydatetime(),
-            format="HH:mm:ss"
-        )
-        cursor_time = pd.to_datetime(cursor)
-        st.session_state.cursor_time = cursor_time
+    start, end = pd.to_datetime(time_range[0]), pd.to_datetime(time_range[1])
 
     filtered_df = df[(df["_time"] >= start) & (df["_time"] <= end)]
 
-    fig = make_subplots(
-        rows=len(signals),
-        cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0.02
-    )
+    if "graphs" not in st.session_state:
+        st.session_state.graphs = [{"left": [], "right": []}]
 
-    for i, col in enumerate(signals, start=1):
-        fig.add_trace(
-            go.Scatter(
-                x=filtered_df["_time"],
-                y=filtered_df[col],
-                mode="lines",
-                line=dict(width=1),
-                name=col,
-                hovertemplate="Time: %{x|%H:%M:%S}<br>" + col + ": %{y}<extra></extra>"
-            ),
-            row=i,
-            col=1
-        )
+    if st.button("Add new graph"):
+        st.session_state.graphs.append({"left": [], "right": []})
 
-    fig.add_vline(
-        x=cursor_time,
-        line_width=1,
-        line_color="white"
-    )
+    for i, graph in enumerate(st.session_state.graphs):
 
-    fig.update_layout(
-        height=250 * len(signals),
-        hovermode="x unified",
-        plot_bgcolor="black",
-        paper_bgcolor="black",
-        showlegend=False,
-        margin=dict(l=40, r=40, t=20, b=40)
-    )
+        st.markdown(f"### Graph {i+1}")
 
-    fig.update_xaxes(
-        showgrid=True,
-        gridcolor="#333",
-        tickformat="%H:%M:%S",
-        fixedrange=True,
-        range=[start, end]
-    )
+        col1, col2 = st.columns(2)
 
-    fig.update_yaxes(
-        showgrid=True,
-        gridcolor="#333",
-        fixedrange=True
-    )
+        with col1:
+            left_cols = st.multiselect(
+                "Left axis",
+                columns,
+                default=graph["left"],
+                key=f"left_{i}"
+            )
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True,
-        config={"scrollZoom": False, "displayModeBar": False}
-    )
+        with col2:
+            right_cols = st.multiselect(
+                "Right axis",
+                columns,
+                default=graph["right"],
+                key=f"right_{i}"
+            )
 
-    st.markdown("### Cursor Values")
+        st.session_state.graphs[i]["left"] = left_cols
+        st.session_state.graphs[i]["right"] = right_cols
 
-    nearest_idx = (df["_time"] - cursor_time).abs().idxmin()
+        selected_cols = []
+        for col in [x_column] + left_cols + right_cols:
+            if col not in selected_cols:
+                selected_cols.append(col)
 
-    values = []
-    for col in signals:
-        values.append((col, df.loc[nearest_idx, col]))
+        if left_cols or right_cols:
 
-    for name, val in values:
-        st.write(f"{name}: {val}")
+            export_df = filtered_df[selected_cols].copy()
+            csv_data = export_df.to_csv(index=False).encode("utf-8")
 
-    export_cols = [x_column] + signals
-    export_df = filtered_df[export_cols].copy()
+            st.download_button(
+                label=f"⬇ Export CSV (Graph {i+1})",
+                data=csv_data,
+                file_name=f"graph_{i+1}.csv",
+                mime="text/csv",
+                key=f"download_{i}"
+            )
 
-    csv_data = export_df.to_csv(index=False).encode("utf-8")
+            fig = go.Figure()
 
-    st.download_button(
-        label="⬇ Export CSV",
-        data=csv_data,
-        file_name="forscan_style.csv",
-        mime="text/csv"
-    )
+            for col in left_cols:
+                fig.add_trace(
+                    go.Scatter(
+                        x=filtered_df["_time"],
+                        y=filtered_df[col],
+                        mode="lines",
+                        name=col,
+                        yaxis="y1",
+                        line=dict(width=2),
+                        hovertemplate="Time: %{x|%H:%M:%S}<br>" + col + ": %{y}<extra></extra>"
+                    )
+                )
+
+            for col in right_cols:
+                fig.add_trace(
+                    go.Scatter(
+                        x=filtered_df["_time"],
+                        y=filtered_df[col],
+                        mode="lines",
+                        name=col,
+                        yaxis="y2",
+                        line=dict(width=2, dash="dash"),
+                        hovertemplate="Time: %{x|%H:%M:%S}<br>" + col + ": %{y}<extra></extra>"
+                    )
+                )
+
+            fig.update_layout(
+                height=400,
+                hovermode="x unified",
+                plot_bgcolor="black",
+                paper_bgcolor="black",
+                xaxis=dict(
+                    title="Time",
+                    rangeslider=dict(visible=False),
+                    showspikes=True,
+                    spikemode="across",
+                    spikesnap="cursor",
+                    spikethickness=1,
+                    spikecolor="white",
+                    tickformat="%H:%M:%S",
+                    showline=True,
+                    range=[start, end]
+                ),
+                yaxis=dict(title="Left"),
+                yaxis2=dict(
+                    title="Right",
+                    overlaying="y",
+                    side="right"
+                ),
+                legend=dict(orientation="h"),
+                margin=dict(l=40, r=40, t=40, b=40)
+            )
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True,
+                config={
+                    "scrollZoom": False,
+                    "displayModeBar": False
+                }
+            )
