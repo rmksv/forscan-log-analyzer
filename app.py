@@ -5,8 +5,7 @@ import plotly.graph_objects as go
 MAX_FILE_SIZE_MB = 50
 MAX_ROWS = 200_000
 
-st.set_page_config(layout="wide")
-st.title("CSV Log Analyzer PRO")
+st.set_page_config(layout="wide", page_title="CSV Analyzer")
 
 uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 
@@ -17,7 +16,7 @@ if uploaded_file is not None:
         st.stop()
 
     try:
-        df = pd.read_csv(uploaded_file)
+        df = pd.read_csv(uploaded_file, sep=None, engine='python')
     except Exception:
         st.error("Invalid or corrupted CSV file")
         st.stop()
