@@ -150,7 +150,7 @@ if uploaded_file is not None:
                         name=col,
                         yaxis="y1",
                         line=dict(width=2),
-                        hovertemplate=col + ": %{y}<extra></extra>"
+                        hovertemplate="%{x|%S}s<br>" + col + ": %{y}<extra></extra>"
                     )
                 )
 
@@ -163,13 +163,13 @@ if uploaded_file is not None:
                         name=col,
                         yaxis="y2",
                         line=dict(width=2, dash="dash"),
-                        hovertemplate=col + ": %{y}<extra></extra>"
+                        hovertemplate="%{x|%S}s<br>" + col + ": %{y}<extra></extra>"
                     )
                 )
 
             fig.update_layout(
                 height=400,
-                hovermode="x unified",
+                hovermode="x",
                 plot_bgcolor="black",
                 paper_bgcolor="black",
                 xaxis=dict(
