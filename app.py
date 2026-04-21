@@ -168,32 +168,31 @@ if uploaded_file is not None:
                 )
 
             fig.update_layout(
-                height=400,
-                hovermode="x unified",
-                plot_bgcolor="black",
-                paper_bgcolor="black",
-                xaxis=dict(
-                    title="Time",
-                    rangeslider=dict(visible=False),
-                    showspikes=True,
-                    spikemode="across",
-                    spikesnap="cursor",
-                    spikethickness=1,
-                    spikecolor="white",
-                    tickformat="%H:%M:%S",
-                    showline=True,
-                    range=[start, end],
-                    hoverformat="%S"
-                ),
-                yaxis=dict(title="Left"),
-                yaxis2=dict(
-                    title="Right",
-                    overlaying="y",
-                    side="right"
-                ),
-                legend=dict(orientation="h"),
-                margin=dict(l=40, r=40, t=40, b=40)
-            )
+            height=400,
+            hovermode="x unified",
+            plot_bgcolor="black",
+            paper_bgcolor="black",
+            xaxis=dict(
+                title="Time",
+                rangeslider=dict(visible=False),
+                showspikes=True,
+                spikemode="across",
+                spikesnap="cursor",
+                spikethickness=1,
+                spikecolor="white",
+                tickformat="%H:%M:%S",
+                showline=True,
+                range=[start, end]
+            ),
+            yaxis=dict(title="Left"),
+            yaxis2=dict(
+                title="Right",
+                overlaying="y",
+                side="right"
+            ),
+            legend=dict(orientation="h"),
+            margin=dict(l=40, r=40, t=40, b=40)
+        )
 
             st.plotly_chart(
                 fig,
