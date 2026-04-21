@@ -49,16 +49,7 @@ if uploaded_file is not None:
         st.session_state.graphs.append({"left": [], "right": []})
 
     for i, graph in enumerate(st.session_state.graphs):
-
-        col_title, col_delete = st.columns([6,1])
-        
-        with col_title:
-            st.markdown(f"### Graph {i+1}")
-        
-        with col_delete:
-            if st.button("❌", key=f"delete_{i}"):
-                st.session_state.graphs.pop(i)
-                st.rerun()
+        st.markdown(f"### Graph {i+1}")
 
         col1, col2 = st.columns(2)
 
@@ -98,6 +89,10 @@ if uploaded_file is not None:
                 mime="text/csv",
                 key=f"download_{i}"
             )
+
+            if st.button(f"🗑 Delete Graph {i+1}", key=f"delete_{i}"):
+                st.session_state.graphs.pop(i)
+                st.rerun()
 
             fig = go.Figure()
 
