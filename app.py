@@ -29,27 +29,66 @@ if uploaded_file is not None:
 
     columns = df.columns.tolist()
 
-    x_column = st.selectbox("Select time column", columns)
+    x_column = "time(ms)"
+
+    if x_column not in df.columns:
+        st.error("Column 'time(ms)' not found in CSV")
+        st.stop()
 
     df[x_column] = pd.to_numeric(df[x_column], errors="coerce")
     df = df.dropna(subset=[x_column])
 
     df["_time"] = pd.to_datetime(df[x_column], unit="ms")
 
-    min_time = df["_time"].min()
-    max_time = df["_time"].max()
+    min_sec = 0
+    max_sec = int((df[x_column].max() - df[x_column].min()) / 1000)
 
-    time_range = st.slider(
-        "Time range",
-        min_value=min_time.to_pydatetime(),
-        max_value=max_time.to_pydatetime(),
-        value=(min_time.to_pydatetime(), max_time.to_pydatetime()),
-        format="HH:mm:ss"
+    if "start_sec" not in st.session_state:
+        st.session_state.start_sec = min_sec
+
+    if "end_sec" not in st.session_state:
+        st.session_state.end_sec = max_sec
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        start_sec = st.number_input(
+            "Start (sec)",
+            min_value=min_sec,
+            max_value=max_sec,
+            step=1,
+            key="start_sec"
+        )
+
+    with col2:
+        end_sec = st.number_input(
+            "End (sec)",
+            min_value=min_sec,
+            max_value=max_sec,
+            step=1,
+            key="end_sec"
+        )
+
+    if start_sec >= end_sec:
+        st.error("Start must be less than End")
+        st.stop()
+
+    base_time = df["_time"].min()
+
+    start = base_time + pd.to_timedelta(start_sec, unit="s")
+    end = base_time + pd.to_timedelta(end_sec, unit="s")
+
+    duration = end - start
+
+    st.write(
+        f"{start.strftime('%H:%M:%S')} — {end.strftime('%H:%M:%S')} "
+        f"(+{str(duration).split('.')[0]})"
     )
 
-    start, end = pd.to_datetime(time_range[0]), pd.to_datetime(time_range[1])
-
-    filtered_df = df[(df["_time"] >= start) & (df["_time"] <= end)]
+    filtered_df = df[
+        (df["_time"] >= start) &
+        (df["_time"] <= end)
+    ]
 
     if "graphs" not in st.session_state:
         st.session_state.graphs = [{"left": [], "right": []}]
