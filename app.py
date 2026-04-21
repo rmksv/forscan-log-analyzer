@@ -50,7 +50,15 @@ if uploaded_file is not None:
 
     for i, graph in enumerate(st.session_state.graphs):
 
-        st.markdown(f"### Graph {i+1}")
+        col_title, col_delete = st.columns([6,1])
+        
+        with col_title:
+            st.markdown(f"### Graph {i+1}")
+        
+        with col_delete:
+            if st.button("❌", key=f"delete_{i}"):
+                st.session_state.graphs.pop(i)
+                st.rerun()
 
         col1, col2 = st.columns(2)
 
