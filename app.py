@@ -6,50 +6,80 @@ from plotly.subplots import make_subplots
 MAX_FILE_SIZE_MB = 50
 MAX_ROWS = 200_000
 
-st.set_page_config(layout="wide", page_title="CSV Analyzer")
+st.set_page_config(layout="wide")
 
 uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 
 if uploaded_file is not None:
 
     if uploaded_file.size > MAX_FILE_SIZE_MB * 1024 * 1024:
-        st.error(f"File too large (max {MAX_FILE_SIZE_MB} MB)")
+        st.error("File too large")
         st.stop()
 
     try:
         df = pd.read_csv(uploaded_file, sep=None, engine="python")
     except Exception:
-        st.error("Invalid or corrupted CSV file")
+        st.error("Invalid CSV")
         st.stop()
 
     if df.empty:
-        st.error("CSV file is empty")
         st.stop()
 
     if len(df) > MAX_ROWS:
         df = df.head(MAX_ROWS)
 
     columns = df.columns.tolist()
-    if len(columns) == 0:
-        st.error("CSV has no columns")
-        st.stop()
 
     x_column = st.selectbox("Select time column", columns)
 
     df[x_column] = pd.to_numeric(df[x_column], errors="coerce")
-
-    if df[x_column].isnull().all():
-        st.error("Selected column is not numeric")
-        st.stop()
-
     df = df.dropna(subset=[x_column])
 
     df["_time"] = pd.to_datetime(df[x_column], unit="ms")
 
-    signals = st.multiselect("Select signals", columns)
+    signals = st.multiselect("Signals", columns)
 
     if len(signals) == 0:
         st.stop()
+
+    min_time = df["_time"].min()
+    max_time = df["_time"].max()
+
+    if "global_range" not in st.session_state:
+        st.session_state.global_range = (min_time, max_time)
+
+    if "cursor_time" not in st.session_state:
+        st.session_state.cursor_time = min_time
+
+    col1, col2 = st.columns([3,1])
+
+    with col1:
+        selected_range = st.slider(
+            "Time range",
+            min_value=min_time.to_pydatetime(),
+            max_value=max_time.to_pydatetime(),
+            value=(
+                st.session_state.global_range[0].to_pydatetime(),
+                st.session_state.global_range[1].to_pydatetime()
+            ),
+            format="HH:mm:ss"
+        )
+
+        start, end = pd.to_datetime(selected_range[0]), pd.to_datetime(selected_range[1])
+        st.session_state.global_range = (start, end)
+
+    with col2:
+        cursor = st.slider(
+            "Cursor",
+            min_value=min_time.to_pydatetime(),
+            max_value=max_time.to_pydatetime(),
+            value=st.session_state.cursor_time.to_pydatetime(),
+            format="HH:mm:ss"
+        )
+        cursor_time = pd.to_datetime(cursor)
+        st.session_state.cursor_time = cursor_time
+
+    filtered_df = df[(df["_time"] >= start) & (df["_time"] <= end)]
 
     fig = make_subplots(
         rows=len(signals),
@@ -61,16 +91,22 @@ if uploaded_file is not None:
     for i, col in enumerate(signals, start=1):
         fig.add_trace(
             go.Scatter(
-                x=df["_time"],
-                y=df[col],
+                x=filtered_df["_time"],
+                y=filtered_df[col],
                 mode="lines",
-                name=col,
                 line=dict(width=1),
+                name=col,
                 hovertemplate="Time: %{x|%H:%M:%S}<br>" + col + ": %{y}<extra></extra>"
             ),
             row=i,
             col=1
         )
+
+    fig.add_vline(
+        x=cursor_time,
+        line_width=1,
+        line_color="white"
+    )
 
     fig.update_layout(
         height=250 * len(signals),
@@ -86,11 +122,7 @@ if uploaded_file is not None:
         gridcolor="#333",
         tickformat="%H:%M:%S",
         fixedrange=True,
-        showspikes=True,
-        spikemode="across",
-        spikesnap="cursor",
-        spikecolor="white",
-        spikethickness=1
+        range=[start, end]
     )
 
     fig.update_yaxes(
@@ -102,19 +134,28 @@ if uploaded_file is not None:
     st.plotly_chart(
         fig,
         use_container_width=True,
-        config={
-            "scrollZoom": False,
-            "displayModeBar": False
-        }
+        config={"scrollZoom": False, "displayModeBar": False}
     )
 
+    st.markdown("### Cursor Values")
+
+    nearest_idx = (df["_time"] - cursor_time).abs().idxmin()
+
+    values = []
+    for col in signals:
+        values.append((col, df.loc[nearest_idx, col]))
+
+    for name, val in values:
+        st.write(f"{name}: {val}")
+
     export_cols = [x_column] + signals
-    export_df = df[export_cols].copy()
+    export_df = filtered_df[export_cols].copy()
+
     csv_data = export_df.to_csv(index=False).encode("utf-8")
 
     st.download_button(
         label="⬇ Export CSV",
         data=csv_data,
-        file_name="forscan_style_export.csv",
+        file_name="forscan_style.csv",
         mime="text/csv"
     )
