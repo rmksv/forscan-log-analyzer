@@ -2,35 +2,62 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-st.set_page_config(layout="wide")
+MAX_FILE_SIZE_MB = 50
+MAX_ROWS = 200_000
 
+st.set_page_config(layout="wide")
 st.title("CSV Log Analyzer PRO")
 
 uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
+if uploaded_file is not None:
 
-    st.dataframe(df.head())
+    if uploaded_file.size > MAX_FILE_SIZE_MB * 1024 * 1024:
+        st.error(f"File too large (max {MAX_FILE_SIZE_MB} MB)")
+        st.stop()
+
+    try:
+        df = pd.read_csv(uploaded_file)
+    except Exception:
+        st.error("Invalid or corrupted CSV file")
+        st.stop()
+
+    if df.empty:
+        st.error("CSV file is empty")
+        st.stop()
+
+    if len(df) > MAX_ROWS:
+        df = df.head(MAX_ROWS)
 
     columns = df.columns.tolist()
-    time_column = st.selectbox("Select time column", columns)
+    if len(columns) == 0:
+        st.error("CSV has no columns")
+        st.stop()
+
+    x_column = st.selectbox("Select X axis", columns)
+
+    df[x_column] = pd.to_numeric(df[x_column], errors='coerce')
+
+    if df[x_column].isnull().all():
+        st.error("Selected X column is not numeric or empty")
+        st.stop()
+
+    df = df.dropna(subset=[x_column])
 
     st.markdown("---")
-
     st.subheader("Global Range Control")
 
-    min_x = float(df[time_column].min())
-    max_x = float(df[time_column].max())
+    min_x = float(df[x_column].min())
+    max_x = float(df[x_column].max())
 
     x_range = st.slider(
-        "Select time range",
+        "Select X range",
         min_value=min_x,
         max_value=max_x,
         value=(min_x, max_x)
     )
 
-    filtered_df = df[(df[time_column] >= x_range[0]) & (df[time_column] <= x_range[1])]
+    filtered_df = df[(df[x_column] >= x_range[0]) & (df[x_column] <= x_range[1])]
 
     st.markdown("---")
 
@@ -69,7 +96,7 @@ if uploaded_file:
 
             for col in left_cols:
                 fig.add_trace(go.Scatter(
-                    x=filtered_df[time_column],
+                    x=filtered_df[x_column],
                     y=filtered_df[col],
                     mode="lines",
                     name=col,
@@ -78,7 +105,7 @@ if uploaded_file:
 
             for col in right_cols:
                 fig.add_trace(go.Scatter(
-                    x=filtered_df[time_column],
+                    x=filtered_df[x_column],
                     y=filtered_df[col],
                     mode="lines",
                     name=col,
@@ -88,25 +115,21 @@ if uploaded_file:
 
             fig.update_layout(
                 height=400,
-
                 hovermode="x unified",
-
                 xaxis=dict(
-                    title=time_column,
-                    rangeslider=dict(visible=True), 
-                    showspikes=True,  
+                    title=x_column,
+                    rangeslider=dict(visible=True),
+                    showspikes=True,
                     spikemode="across",
                     spikesnap="cursor",
                     showline=True
                 ),
-
                 yaxis=dict(title="Left"),
                 yaxis2=dict(
                     title="Right",
                     overlaying="y",
                     side="right"
                 ),
-
                 legend=dict(orientation="h"),
                 margin=dict(l=40, r=40, t=40, b=40)
             )
@@ -114,5 +137,5 @@ if uploaded_file:
             st.plotly_chart(
                 fig,
                 use_container_width=True,
-                config={"scrollZoom": True} 
+                config={"scrollZoom": True}
             )
