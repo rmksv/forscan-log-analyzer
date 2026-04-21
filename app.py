@@ -196,7 +196,7 @@ if uploaded_file is not None:
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width="stretch",
                 config={
                     "scrollZoom": False,
                     "displayModeBar": True
