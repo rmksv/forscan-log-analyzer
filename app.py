@@ -149,7 +149,7 @@ if uploaded_file is not None:
                 fig,
                 width="stretch",
                 config={
-                    "scrollZoom": True,
+                    "scrollZoom": False,
                     "displayModeBar": True
                 }
             )
