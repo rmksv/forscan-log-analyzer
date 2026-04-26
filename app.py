@@ -109,9 +109,11 @@ if uploaded_file is not None:
         col_export, col_delete = st.columns([3, 1])
 
         with col_delete:
+            st.markdown("<div style='text-align: left;'>", unsafe_allow_html=True)
             if st.button("🗑 Delete Graph", key=f"delete_{i}"):
                 st.session_state.graphs.pop(i)
                 st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
 
         selected_cols = []
         for col in [x_column] + left_cols + right_cols:
