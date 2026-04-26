@@ -68,11 +68,6 @@ if uploaded_file is not None:
             )
             st.session_state.graphs[i]["name"] = graph_name
 
-        with col_delete:
-            if st.button("🗑 Delete", key=f"delete_{i}"):
-                st.session_state.graphs.pop(i)
-                st.rerun()
-
         # --- TIME SLIDER PER GRAPH ---
         min_time = int(df[x_column].min())
         max_time = int(df[x_column].max())
@@ -110,6 +105,13 @@ if uploaded_file is not None:
 
         st.session_state.graphs[i]["left"] = left_cols
         st.session_state.graphs[i]["right"] = right_cols
+
+        col_export, col_delete = st.columns([3, 1])
+
+        with col_delete:
+            if st.button("🗑 Delete Graph", key=f"delete_{i}"):
+                st.session_state.graphs.pop(i)
+                st.rerun()
 
         selected_cols = []
         for col in [x_column] + left_cols + right_cols:
