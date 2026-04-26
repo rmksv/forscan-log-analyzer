@@ -53,22 +53,20 @@ if uploaded_file is not None:
             "name": f"Graph {len(st.session_state.graphs)+1}"
         })
 
-    # --- LOOP GRAPHS ---
+    # --- LOOP ---
     for i, graph in enumerate(st.session_state.graphs):
 
-        st.markdown(f"---")
+        st.markdown("---")
 
-        col_title, col_delete = st.columns([4, 1])
+        # --- GRAPH NAME ---
+        graph_name = st.text_input(
+            "Graph name",
+            value=graph.get("name", f"Graph {i+1}"),
+            key=f"name_{i}"
+        )
+        st.session_state.graphs[i]["name"] = graph_name
 
-        with col_title:
-            graph_name = st.text_input(
-                "Graph name",
-                value=graph.get("name", f"Graph {i+1}"),
-                key=f"name_{i}"
-            )
-            st.session_state.graphs[i]["name"] = graph_name
-
-        # --- TIME SLIDER PER GRAPH ---
+        # --- SLIDER ---
         min_time = int(df[x_column].min())
         max_time = int(df[x_column].max())
 
@@ -85,6 +83,7 @@ if uploaded_file is not None:
             (df[x_column] <= end)
         ]
 
+        # --- AXES ---
         col1, col2 = st.columns(2)
 
         with col1:
@@ -106,13 +105,10 @@ if uploaded_file is not None:
         st.session_state.graphs[i]["left"] = left_cols
         st.session_state.graphs[i]["right"] = right_cols
 
-        col_export, col_delete = st.columns([2, 1])
-
-        with col_delete:
-            st.write("")  # трохи "відпускає" кнопку
-            if st.button("🗑 Delete Graph", key=f"delete_{i}"):
-                st.session_state.graphs.pop(i)
-                st.rerun()
+        # --- DELETE (ЛІВОРУЧ) ---
+        if st.button("🗑 Delete Graph", key=f"delete_{i}"):
+            st.session_state.graphs.pop(i)
+            st.rerun()
 
         selected_cols = []
         for col in [x_column] + left_cols + right_cols:
@@ -120,25 +116,26 @@ if uploaded_file is not None:
                 selected_cols.append(col)
 
         # --- EXPORT ---
-        if not filtered_df.empty and (left_cols or right_cols):
+        col_export, _ = st.columns([1, 5])
 
-            export_df = filtered_df[selected_cols].copy()
-            csv_data = export_df.to_csv(index=False).encode("utf-8")
+        with col_export:
+            if not filtered_df.empty and (left_cols or right_cols):
+                export_df = filtered_df[selected_cols].copy()
+                csv_data = export_df.to_csv(index=False).encode("utf-8")
 
-            st.download_button(
-                label=f"⬇ Export CSV ({graph_name})",
-                data=csv_data,
-                file_name=f"{graph_name}.csv",
-                mime="text/csv",
-                key=f"download_{i}"
-            )
+                st.download_button(
+                    label=f"⬇ Export CSV",
+                    data=csv_data,
+                    file_name=f"{graph_name}.csv",
+                    mime="text/csv",
+                    key=f"download_{i}"
+                )
 
         # --- GRAPH ---
         if left_cols or right_cols:
 
             fig = go.Figure()
 
-            # LEFT
             for col in left_cols:
                 fig.add_trace(
                     go.Scatter(
@@ -152,7 +149,6 @@ if uploaded_file is not None:
                     )
                 )
 
-            # RIGHT
             for col in right_cols:
                 fig.add_trace(
                     go.Scatter(
@@ -175,13 +171,12 @@ if uploaded_file is not None:
                 xaxis=dict(
                     title="Time",
                     type="date",
+                    tickformat="%H:%M:%S",
                     showspikes=True,
                     spikemode="across",
                     spikesnap="cursor",
                     spikethickness=1,
-                    spikecolor="white",
-                    tickformat="%H:%M:%S",
-                    showline=True
+                    spikecolor="white"
                 ),
                 yaxis=dict(title="Left"),
                 yaxis2=dict(
