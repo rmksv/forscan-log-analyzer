@@ -38,7 +38,24 @@ if uploaded_file is not None:
 
     df["_time"] = pd.to_datetime(df[x_column], unit="ms")
 
-    filtered_df = df
+    # --- GLOBAL TIME FILTER ---
+    st.markdown("### Time range filter")
+    
+    min_time = df["_time"].min()
+    max_time = df["_time"].max()
+    
+    start_time, end_time = st.slider(
+        "Select time range",
+        min_value=min_time,
+        max_value=max_time,
+        value=(min_time, max_time),
+        format="HH:mm:ss"
+    )
+    
+    filtered_df = df[
+        (df["_time"] >= start_time) &
+        (df["_time"] <= end_time)
+    ]
 
     columns = df.columns.tolist()
 
