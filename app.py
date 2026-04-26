@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-MAX_FILE_SIZE_MB = 50
+MAX_FILE_SIZE_MB = 200
 MAX_ROWS = 200_000
 
 st.set_page_config(layout="wide")
