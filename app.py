@@ -41,20 +41,19 @@ if uploaded_file is not None:
     # --- GLOBAL TIME FILTER ---
     st.markdown("### Time range filter")
     
-    min_time = df["_time"].min()
-    max_time = df["_time"].max()
+    min_time = int(df[x_column].min())
+    max_time = int(df[x_column].max())
     
-    start_time, end_time = st.slider(
-        "Select time range",
+    start, end = st.slider(
+        "Select time range (ms)",
         min_value=min_time,
         max_value=max_time,
-        value=(min_time, max_time),
-        format="HH:mm:ss"
+        value=(min_time, max_time)
     )
     
     filtered_df = df[
-        (df["_time"] >= start_time) &
-        (df["_time"] <= end_time)
+        (df[x_column] >= start) &
+        (df[x_column] <= end)
     ]
 
     columns = df.columns.tolist()
