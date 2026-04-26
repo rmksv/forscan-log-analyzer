@@ -106,14 +106,13 @@ if uploaded_file is not None:
         st.session_state.graphs[i]["left"] = left_cols
         st.session_state.graphs[i]["right"] = right_cols
 
-        col_export, col_delete = st.columns([3, 1])
+        col_export, col_delete = st.columns([2, 1])
 
         with col_delete:
-            st.markdown("<div style='text-align: left;'>", unsafe_allow_html=True)
+            st.write("")  # трохи "відпускає" кнопку
             if st.button("🗑 Delete Graph", key=f"delete_{i}"):
                 st.session_state.graphs.pop(i)
                 st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
 
         selected_cols = []
         for col in [x_column] + left_cols + right_cols:
